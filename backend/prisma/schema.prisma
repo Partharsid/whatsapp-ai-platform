@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SessionStatus {
+  CONNECTED
+  SCAN_QR
+  DISCONNECTED
+}
+
+enum MessageSender {
+  USER
+  BOT
+}
+
+model AdminUser {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+model Tenant {
+  id        String          @id @default(uuid())
+  name      String
+  createdAt DateTime        @default(now())
+  active    Boolean         @default(true)
+  sessions  BaileysSession[]
+  configs   BotConfig[]
+  contacts  Contact[]
+  messages  MessageLog[]
+}
+
+model BaileysSession {
+  id          String        @id @default(uuid())
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessionName String
+  status      SessionStatus @default(DISCONNECTED)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  authState   BaileysAuthState[]
+
+  @@unique([tenantId, sessionName])
+}
+
+model BaileysAuthState {
+  id        String   @id @default(uuid())
+  sessionId String
+  session   BaileysSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  key       String
+  data      Json
+
+  @@unique([sessionId, key])
+}
+
+model BotConfig {
+  id            String @id @default(uuid())
+  tenantId      String
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  openRouterKey String
+  aiModel       String @default("meta-llama/llama-3-8b-instruct:free")
+  systemPrompt  String @default("You are a helpful WhatsApp AI assistant.")
+
+  @@unique([tenantId])
+}
+
+model Contact {
+  id          String      @id @default(uuid())
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  phoneNumber String
+  name        String?
+  createdAt   DateTime    @default(now())
+  messages    MessageLog[]
+
+  @@unique([tenantId, phoneNumber])
+}
+
+model MessageLog {
+  id        String        @id @default(uuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact       @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  sender    MessageSender
+  content   String
+  timestamp DateTime      @default(now())
+
+  @@index([tenantId, contactId, timestamp])
+}

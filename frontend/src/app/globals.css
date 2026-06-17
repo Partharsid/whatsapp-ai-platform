@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #08090a;
+    --foreground: #f7f8f8;
+    --card: #161718;
+    --card-foreground: #f7f8f8;
+    --popover: #161718;
+    --popover-foreground: #f7f8f8;
+    --primary: #e4f222;
+    --primary-foreground: #08090a;
+    --secondary: #0f1011;
+    --secondary-foreground: #d0d6e0;
+    --muted: #23252a;
+    --muted-foreground: #8a8f98;
+    --accent: #5e6ad2;
+    --accent-foreground: #f7f8f8;
+    --destructive: #eb5757;
+    --destructive-foreground: #f7f8f8;
+    --border: #23252a;
+    --input: #383b3f;
+    --ring: #5e6ad2;
+    --radius: 6px;
+  }
+
+  * {
+    border-color: #23252a;
+  }
+
+  body {
+    @apply bg-onyx text-snow antialiased;
+    font-feature-settings: "cv01" on, "ss03" on;
+  }
+}
+
+@layer components {
+  .card-surface {
+    @apply bg-obsidian border border-graphite rounded-cards;
+  }
+
+  .nav-surface {
+    @apply bg-charcoal border-b border-graphite;
+  }
+
+  .input-surface {
+    @apply bg-steel border-0 text-snow placeholder:text-slate;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  }
+
+  .input-surface:focus {
+    box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.5);
+  }
+
+  .btn-primary {
+    @apply bg-acid-lime text-onyx font-medium px-4 py-2 rounded-buttons;
+    font-weight: 510;
+    box-shadow: rgba(0, 0, 0, 0.01) 0px 5px 2px 0px, rgba(0, 0, 0, 0.04) 0px 3px 2px 0px, rgba(0, 0, 0, 0.07) 0px 1px 1px 0px, rgba(0, 0, 0, 0.08) 0px 0px 1px 0px;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.05);
+  }
+
+  .btn-secondary {
+    @apply bg-transparent text-fog border border-graphite px-4 py-2 rounded-buttons;
+    font-weight: 400;
+  }
+
+  .btn-secondary:hover {
+    @apply text-snow border-iron;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-fog px-3 py-2 rounded-buttons;
+    font-weight: 400;
+  }
+
+  .btn-ghost:hover {
+    @apply text-snow bg-charcoal;
+  }
+
+  .btn-danger {
+    @apply bg-transparent text-crimson border border-crimson/30 px-4 py-2 rounded-buttons;
+    font-weight: 400;
+  }
+
+  .btn-danger:hover {
+    @apply bg-crimson/10 border-crimson;
+  }
+}
