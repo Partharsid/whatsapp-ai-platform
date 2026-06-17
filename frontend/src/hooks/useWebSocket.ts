@@ -18,7 +18,7 @@ export function useWebSocket(sessionId: string | null) {
   const connect = useCallback(() => {
     if (!sessionId) return
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `ws://localhost:8080`
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
     const ws = new WebSocket(`${wsUrl}?sessionId=${sessionId}`)
 
     ws.onopen = () => {
