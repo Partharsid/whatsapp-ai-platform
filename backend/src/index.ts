@@ -64,7 +64,7 @@ async function bootstrap() {
     await sessionManager.initialize()
     logger.info('WhatsApp sessions rehydrated from database')
 
-    server.listen(env.PORT, () => {
+    server.listen(env.PORT, '0.0.0.0', () => {
       logger.info(`Server running on port ${env.PORT} in ${env.NODE_ENV} mode`)
     })
   } catch (error: any) {

@@ -9,7 +9,7 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
@@ -56,6 +56,9 @@ ENV PORT=8080
 # Copy node_modules (production only)
 COPY --from=deps /app/node_modules ./node_modules
 
+# Copy Prisma generated client from builder (it's in node_modules/.prisma)
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
 # Copy shared package
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
@@ -67,7 +70,8 @@ COPY --from=builder /app/backend/package.json ./backend/
 
 # Copy frontend (Next.js build output)
 COPY --from=builder /app/frontend/.next ./frontend/.next
-COPY --from=builder /app/frontend/node_modules/next ./frontend/node_modules/next 2>/dev/null || true
+# next is hoisted to root node_modules in workspace
+COPY --from=builder /app/node_modules/next ./node_modules/next
 COPY --from=builder /app/frontend/package.json ./frontend/
 COPY --from=builder /app/frontend/next.config.js ./frontend/
 COPY --from=builder /app/frontend/public ./frontend/public
