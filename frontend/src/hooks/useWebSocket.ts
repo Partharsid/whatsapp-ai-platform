@@ -18,14 +18,16 @@ export function useWebSocket(sessionId: string | null) {
   const connect = useCallback(() => {
     if (!sessionId) return
 
+    const token = localStorage.getItem('wa_token')
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
-    const ws = new WebSocket(`${wsUrl}?sessionId=${sessionId}`)
+    const ws = new WebSocket(`${wsUrl}?sessionId=${sessionId}&token=${token || ''}`)
 
     ws.onopen = () => {
-      setConnected(true)
+      if (wsRef.current === ws) setConnected(true)
     }
 
     ws.onmessage = (event) => {
+      if (wsRef.current !== ws) return
       try {
         const data: WebSocketMessage = JSON.parse(event.data)
 
@@ -49,8 +51,9 @@ export function useWebSocket(sessionId: string | null) {
     }
 
     ws.onclose = () => {
-      setConnected(false)
-      setQrCode(null)
+      if (wsRef.current === ws) {
+        setConnected(false)
+      }
     }
 
     ws.onerror = (error) => {

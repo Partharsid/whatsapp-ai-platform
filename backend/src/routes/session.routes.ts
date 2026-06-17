@@ -2,8 +2,14 @@ import { Router, Request, Response } from 'express'
 import { prisma } from '../config/database'
 import { WhatsAppSessionManager } from '../services/WhatsAppSessionManager'
 import { AppError } from '../middleware/errorHandler'
+import { z } from 'zod'
 
 const router = Router()
+
+const createSessionSchema = z.object({
+  tenantId: z.string().uuid(),
+  sessionName: z.string().min(1).max(100),
+})
 
 router.get('/', async (_req: Request, res: Response) => {
   const sessions = await prisma.baileysSession.findMany({
@@ -26,10 +32,12 @@ router.get('/:id', async (req: Request, res: Response) => {
 })
 
 router.post('/', async (req: Request, res: Response) => {
-  const { tenantId, sessionName } = req.body
-  if (!tenantId || !sessionName) {
-    throw new AppError(400, 'tenantId and sessionName are required')
+  const result = createSessionSchema.safeParse(req.body)
+  if (!result.success) {
+    throw new AppError(400, 'Invalid tenantId or sessionName format')
   }
+
+  const { tenantId, sessionName } = result.data
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
   if (!tenant) throw new AppError(404, 'Tenant not found')

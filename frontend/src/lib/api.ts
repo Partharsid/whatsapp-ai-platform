@@ -6,12 +6,19 @@ function getBaseUrl() {
 }
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('wa_token') : null
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options?.headers as Record<string, string>,
+  }
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const res = await fetch(`${getBaseUrl()}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
     ...options,
+    headers,
   })
 
   if (!res.ok) {
@@ -25,10 +32,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export const api = {
   auth: {
     login: (email: string, password: string) =>
-      fetchApi<{ user: { id: string; email: string } }>('/auth/login', {
+      fetchApi<{ user: { id: string; email: string }; token: string }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
+    me: () => fetchApi<{ user: { id: string; email: string } }>('/auth/me'),
   },
   tenants: {
     list: () => fetchApi<{ tenants: any[] }>('/tenants'),

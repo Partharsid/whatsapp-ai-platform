@@ -15,6 +15,8 @@ import { MessageHandler } from './MessageHandler'
 export class WhatsAppSessionManager {
   private static instance: WhatsAppSessionManager
   private sessions: Map<string, WASocket> = new Map()
+  private sessionMeta: Map<string, { tenantId: string; sessionName: string }> = new Map()
+  private reconnectTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private wsServer: WebSocketServer | null = null
 
   private constructor() {}
@@ -69,6 +71,9 @@ export class WhatsAppSessionManager {
   }
 
   async disconnectSession(sessionId: string): Promise<void> {
+    const t = this.reconnectTimers.get(sessionId)
+    if (t) { clearTimeout(t); this.reconnectTimers.delete(sessionId) }
+
     const sock = this.sessions.get(sessionId)
     if (sock) {
       sock.end(new Error('Manually disconnected'))
@@ -76,6 +81,7 @@ export class WhatsAppSessionManager {
       this.sessions.delete(sessionId)
     }
 
+    this.sessionMeta.delete(sessionId)
     await purgeAuthState(sessionId)
     await prisma.baileysSession.update({
       where: { id: sessionId },
@@ -97,7 +103,9 @@ export class WhatsAppSessionManager {
     const { state, saveCreds, saveKeys } = await usePrismaAuthState(sessionId)
     const { version, isLatest } = await fetchLatestBaileysVersion()
 
-    logger.info({ sessionId, sessionName, version, isLatest }, 'Creating Baileys socket')
+    logger.info({ sessionId, sessionName, version }, 'Creating Baileys socket')
+
+    this.sessionMeta.set(sessionId, { tenantId, sessionName })
 
     const sock = makeWASocket({
       version,
@@ -110,12 +118,19 @@ export class WhatsAppSessionManager {
       browser: ['WhatsApp AI Agent', 'Chrome', '120.0.0'],
       syncFullHistory: false,
       markOnlineOnConnect: false,
+      connectTimeoutMs: 60000,
+      keepAliveIntervalMs: 10000,
     })
 
     this.sessions.set(sessionId, sock)
 
     sock.ev.on('creds.update', async () => {
-      await saveCreds()
+      try {
+        await saveCreds()
+        logger.debug({ sessionId }, 'Creds saved after update')
+      } catch (error) {
+        logger.error({ error, sessionId }, 'Failed to save creds')
+      }
     })
 
     sock.ev.on('connection.update', async (update: any) => {
@@ -135,9 +150,9 @@ export class WhatsAppSessionManager {
     sessionId: string,
     update: any
   ) {
-    const { connection, lastDisconnect, qr } = update
+    const { connection, lastDisconnect, qr, isNewLogin } = update
 
-    logger.info({ sessionId, updateKeys: Object.keys(update), hasQr: !!qr, connection }, 'Baileys connection update')
+    logger.info({ sessionId, update: JSON.stringify(update, (_, v) => typeof v === 'string' ? v.substring(0, 100) : v) }, 'Baileys connection update full')
 
     if (qr) {
       try {
@@ -158,8 +173,15 @@ export class WhatsAppSessionManager {
       this.wsServer?.sendStatus(sessionId, 'SCAN_QR')
     }
 
+    if (isNewLogin) {
+      logger.info({ sessionId }, 'New login detected after QR scan')
+    }
+
     if (connection === 'open') {
       logger.info({ sessionId }, 'WhatsApp session connected')
+      const t = this.reconnectTimers.get(sessionId)
+      if (t) { clearTimeout(t); this.reconnectTimers.delete(sessionId) }
+      this.sessions.set(sessionId, sock)
       await prisma.baileysSession.update({
         where: { id: sessionId },
         data: { status: 'CONNECTED' },
@@ -169,11 +191,12 @@ export class WhatsAppSessionManager {
 
     if (connection === 'close') {
       const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode
-      logger.info({ sessionId, statusCode }, 'WhatsApp session disconnected')
-
-      this.sessions.delete(sessionId)
+      const reason = lastDisconnect?.error?.message
+      logger.info({ sessionId, statusCode, reason }, 'WhatsApp session disconnected')
 
       if (statusCode === DisconnectReason.loggedOut) {
+        this.sessions.delete(sessionId)
+        this.sessionMeta.delete(sessionId)
         await purgeAuthState(sessionId)
         await prisma.baileysSession.update({
           where: { id: sessionId },
@@ -181,12 +204,37 @@ export class WhatsAppSessionManager {
         })
         this.wsServer?.sendStatus(sessionId, 'LOGGED_OUT')
       } else {
-        await prisma.baileysSession.update({
-          where: { id: sessionId },
-          data: { status: 'DISCONNECTED' },
-        })
-        this.wsServer?.sendStatus(sessionId, 'DISCONNECTED')
+        const meta = this.sessionMeta.get(sessionId)
+        if (meta && !this.reconnectTimers.has(sessionId)) {
+          logger.info({ sessionId, statusCode }, 'Scheduling reconnect in 3s')
+          this.reconnectTimers.set(sessionId, setTimeout(() => {
+            this.reconnectTimers.delete(sessionId)
+            this.sessions.delete(sessionId)
+            this.createSocket(sessionId, meta.tenantId, meta.sessionName).catch((error) => {
+              logger.error({ error, sessionId }, 'Reconnect failed')
+            })
+          }, 3000))
+        }
       }
     }
+  }
+
+  async shutdown() {
+    logger.info('Shutting down WhatsApp session manager...')
+    for (const [sessionId, timer] of this.reconnectTimers.entries()) {
+      clearTimeout(timer)
+    }
+    this.reconnectTimers.clear()
+
+    for (const [sessionId, sock] of this.sessions.entries()) {
+      try {
+        sock.end(new Error('Server shutting down'))
+        sock.ws?.close()
+      } catch (e) {
+        logger.error({ sessionId, error: e }, 'Error closing socket during shutdown')
+      }
+    }
+    this.sessions.clear()
+    this.sessionMeta.clear()
   }
 }

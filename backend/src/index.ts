@@ -16,6 +16,7 @@ import contactRoutes from './routes/contact.routes'
 import messageRoutes from './routes/message.routes'
 import { WhatsAppSessionManager } from './services/WhatsAppSessionManager'
 import { WebSocketServer } from './services/websocket'
+import { authMiddleware } from './middleware/auth'
 
 validateEnv()
 
@@ -37,16 +38,18 @@ app.use(cookieParser())
 
 app.use('/api', healthRoutes)
 app.use('/api/auth', authRoutes)
-app.use('/api/sessions', sessionRoutes)
-app.use('/api/tenants', tenantRoutes)
-app.use('/api/contacts', contactRoutes)
-app.use('/api/messages', messageRoutes)
+app.use('/api/sessions', authMiddleware, sessionRoutes)
+app.use('/api/tenants', authMiddleware, tenantRoutes)
+app.use('/api/contacts', authMiddleware, contactRoutes)
+app.use('/api/messages', authMiddleware, messageRoutes)
 
 app.all('*', (req, res) => {
   return handle(req, res)
 })
 
 app.use(errorHandler)
+
+let wsServerInstance: WebSocketServer | null = null
 
 async function bootstrap() {
   try {
@@ -56,11 +59,11 @@ async function bootstrap() {
     await prisma.$connect()
     logger.info('Connected to PostgreSQL (Supabase)')
 
-    const wsServer = new WebSocketServer(server)
-    wsServer.initialize()
+    wsServerInstance = new WebSocketServer(server)
+    wsServerInstance.initialize()
 
     const sessionManager = WhatsAppSessionManager.getInstance()
-    sessionManager.setWsServer(wsServer)
+    sessionManager.setWsServer(wsServerInstance)
     await sessionManager.initialize()
     logger.info('WhatsApp sessions rehydrated from database')
 
@@ -75,16 +78,32 @@ async function bootstrap() {
   }
 }
 
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully')
-  await prisma.$disconnect()
-  process.exit(0)
-})
+async function shutdown() {
+  logger.info('Shutting down gracefully...')
+  try {
+    const sessionManager = WhatsAppSessionManager.getInstance()
+    // You should add a shutdown method to WhatsAppSessionManager later
+    if (typeof (sessionManager as any).shutdown === 'function') {
+      await (sessionManager as any).shutdown()
+    }
+    
+    // You should add a close method to WebSocketServer later
+    if (wsServerInstance && typeof (wsServerInstance as any).close === 'function') {
+      (wsServerInstance as any).close()
+    }
 
-process.on('SIGINT', async () => {
-  logger.info('SIGINT received, shutting down gracefully')
-  await prisma.$disconnect()
-  process.exit(0)
-})
+    await prisma.$disconnect()
+    server.close(() => {
+      logger.info('HTTP server closed')
+      process.exit(0)
+    })
+  } catch (err) {
+    logger.error({ err }, 'Error during shutdown')
+    process.exit(1)
+  }
+}
+
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)
 
 bootstrap()

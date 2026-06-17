@@ -22,22 +22,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('wa_user')
-    if (stored) {
-      try { setUser(JSON.parse(stored)) } catch { localStorage.removeItem('wa_user') }
+    const initAuth = async () => {
+      const token = localStorage.getItem('wa_token')
+      if (token) {
+        try {
+          const { user } = await api.auth.me()
+          setUser(user)
+        } catch {
+          localStorage.removeItem('wa_token')
+          setUser(null)
+        }
+      }
+      setLoading(false)
     }
-    setLoading(false)
+    initAuth()
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
     const data = await api.auth.login(email, password)
-    const userData = data.user
-    localStorage.setItem('wa_user', JSON.stringify(userData))
-    setUser(userData)
+    localStorage.setItem('wa_token', data.token)
+    setUser(data.user)
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('wa_user')
+    localStorage.removeItem('wa_token')
     setUser(null)
   }, [])
 
