@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client'
+import { initAuthCreds } from '@whiskeysockets/baileys'
 import { prisma } from '../config/database'
 import { logger } from '../config/logger'
 
@@ -68,8 +69,9 @@ export async function usePrismaAuthState(sessionId: string): Promise<{
     readFromDb(sessionId, 'app-keys'),
   ])
 
+  const hasValidCreds = credsData && Object.keys(credsData).length > 5
   const state: BaileysAuthState = {
-    creds: credsData || {},
+    creds: hasValidCreds ? credsData : (initAuthCreds() as unknown as Record<string, unknown>),
     keys: keysData || {},
   }
 
