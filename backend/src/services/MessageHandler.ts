@@ -3,6 +3,7 @@ import { prisma } from '../config/database'
 import { logger } from '../config/logger'
 import { decrypt } from '../config/crypto'
 import { OpenRouterService } from './OpenRouterService'
+import { WhatsAppSessionManager } from './WhatsAppSessionManager'
 
 export class MessageHandler {
   private static instance: MessageHandler
@@ -61,7 +62,7 @@ export class MessageHandler {
 
       const currentPromise = previousPromise.then(async () => {
         try {
-          await this.processMessageTask(sessionId, tenantId, sock, remoteJid, contact.id, messageContent)
+          await this.processMessageTask(sessionId, tenantId, sock, remoteJid, contact, messageContent)
         } catch (error) {
           logger.error({ error, sessionId, tenantId }, 'Error in message processing task')
         }
@@ -78,7 +79,7 @@ export class MessageHandler {
     tenantId: string,
     sock: WASocket,
     remoteJid: string,
-    contactId: string,
+    contact: any,
     messageContent: string
   ) {
     const botConfig = await prisma.botConfig.findUnique({
@@ -94,20 +95,30 @@ export class MessageHandler {
     }
 
     const recentMessages = await prisma.messageLog.findMany({
-      where: { tenantId, contactId: contactId },
+      where: { tenantId, contactId: contact.id },
       orderBy: { timestamp: 'desc' },
       take: 10,
     })
     recentMessages.reverse()
 
-    await prisma.messageLog.create({
+    const userMessageLog = await prisma.messageLog.create({
       data: {
         tenantId,
-        contactId,
+        contactId: contact.id,
         sender: 'USER',
         content: messageContent,
       },
     })
+
+    const wsServer = WhatsAppSessionManager.getInstance().getWsServer()
+    if (wsServer) {
+      wsServer.broadcastMessage(sessionId, userMessageLog)
+    }
+
+    if (contact.aiPaused) {
+      logger.info({ tenantId, contactId: contact.id }, 'AI is paused for this contact. Skipping AI reply.')
+      return
+    }
 
     await sock.sendPresenceUpdate('composing', remoteJid)
 
@@ -126,14 +137,18 @@ export class MessageHandler {
     if (reply) {
       await sock.sendMessage(remoteJid, { text: reply })
 
-      await prisma.messageLog.create({
+      const botMessageLog = await prisma.messageLog.create({
         data: {
           tenantId,
-          contactId,
+          contactId: contact.id,
           sender: 'BOT',
           content: reply,
         },
       })
+
+      if (wsServer) {
+        wsServer.broadcastMessage(sessionId, botMessageLog)
+      }
     }
   }
 

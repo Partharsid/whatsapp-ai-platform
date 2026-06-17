@@ -85,6 +85,10 @@ export class WebSocketServer {
     this.broadcast(sessionId, { type: 'status', sessionId, status })
   }
 
+  broadcastMessage(sessionId: string, messageData: any) {
+    this.broadcast(sessionId, { type: 'message', message: messageData })
+  }
+
   private broadcast(sessionId: string, data: Record<string, unknown>) {
     const sessionClients = this.clients.get(sessionId)
     if (!sessionClients) return

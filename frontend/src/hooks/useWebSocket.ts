@@ -3,16 +3,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 interface WebSocketMessage {
-  type: 'qr' | 'status' | 'connected'
+  type: 'qr' | 'status' | 'connected' | 'message'
   sessionId: string
   qr?: string
   status?: string
+  message?: any
 }
 
 export function useWebSocket(sessionId: string | null) {
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [connected, setConnected] = useState(false)
+  const [latestMessage, setLatestMessage] = useState<any>(null)
   const wsRef = useRef<WebSocket | null>(null)
 
   const connect = useCallback(() => {
@@ -43,6 +45,11 @@ export function useWebSocket(sessionId: string | null) {
             break
           case 'connected':
             setConnected(true)
+            break
+          case 'message':
+            if (data.message) {
+              setLatestMessage(data.message)
+            }
             break
         }
       } catch (error) {
@@ -81,7 +88,8 @@ export function useWebSocket(sessionId: string | null) {
     setQrCode(null)
     setConnected(false)
     setStatus(null)
+    setLatestMessage(null)
   }, [])
 
-  return { qrCode, status, connected, disconnect }
+  return { qrCode, status, connected, disconnect, latestMessage }
 }

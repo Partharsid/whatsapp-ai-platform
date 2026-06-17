@@ -82,6 +82,11 @@ export const api = {
     },
     messages: (contactId: string) =>
       fetchApi<{ messages: any[] }>(`/contacts/${contactId}/messages`),
+    togglePause: (id: string, aiPaused: boolean) =>
+      fetchApi<{ contact: any }>(`/contacts/${id}/pause`, {
+        method: 'PUT',
+        body: JSON.stringify({ aiPaused }),
+      }),
   },
   messages: {
     list: (params?: { tenantId?: string; contactId?: string; limit?: number }) => {
@@ -91,5 +96,10 @@ export const api = {
       if (params?.limit) query.set('limit', String(params.limit))
       return fetchApi<{ messages: any[] }>(`/messages?${query}`)
     },
+    send: (tenantId: string, contactId: string, content: string) =>
+      fetchApi<{ message: any }>('/messages', {
+        method: 'POST',
+        body: JSON.stringify({ tenantId, contactId, content }),
+      }),
   },
 }

@@ -32,6 +32,14 @@ export class WhatsAppSessionManager {
     this.wsServer = wsServer
   }
 
+  getWsServer(): WebSocketServer | null {
+    return this.wsServer
+  }
+
+  getSession(sessionId: string): WASocket | undefined {
+    return this.sessions.get(sessionId)
+  }
+
   async initialize() {
     const connectedSessions = await prisma.baileysSession.findMany({
       where: { status: 'CONNECTED' },
@@ -141,6 +149,24 @@ export class WhatsAppSessionManager {
       const messageHandler = MessageHandler.getInstance()
       for (const msg of messages) {
         await messageHandler.handleIncomingMessage(sessionId, tenantId, sock, msg)
+      }
+    })
+
+    sock.ev.on('contacts.upsert', async (contacts) => {
+      for (const contact of contacts) {
+        if (contact.id.endsWith('@s.whatsapp.net')) {
+          const phoneNumber = contact.id.replace('@s.whatsapp.net', '')
+          const name = contact.notify || contact.name || contact.verifiedName || null
+          try {
+            await prisma.contact.upsert({
+              where: { tenantId_phoneNumber: { tenantId, phoneNumber } },
+              update: name ? { name } : {},
+              create: { tenantId, phoneNumber, name },
+            })
+          } catch (error) {
+            logger.error({ error, phoneNumber }, 'Failed to sync contact')
+          }
+        }
       }
     })
   }

@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { prisma } from '../config/database'
+import { AppError } from '../middleware/errorHandler'
+import { z } from 'zod'
 
 const router = Router()
 
@@ -37,6 +39,26 @@ router.get('/:id/messages', async (req: Request, res: Response) => {
   })
 
   res.json({ messages })
+})
+
+const pauseSchema = z.object({
+  aiPaused: z.boolean()
+})
+
+router.put('/:id/pause', async (req: Request, res: Response) => {
+  const contactId = req.params.id as string
+  const result = pauseSchema.safeParse(req.body)
+  
+  if (!result.success) {
+    throw new AppError(400, 'Invalid payload: aiPaused must be boolean')
+  }
+
+  const contact = await prisma.contact.update({
+    where: { id: contactId },
+    data: { aiPaused: result.data.aiPaused }
+  })
+
+  res.json({ contact })
 })
 
 export default router
