@@ -137,6 +137,8 @@ export class WhatsAppSessionManager {
   ) {
     const { connection, lastDisconnect, qr } = update
 
+    logger.info({ sessionId, updateKeys: Object.keys(update), hasQr: !!qr, connection }, 'Baileys connection update')
+
     if (qr) {
       try {
         const qrBase64 = await QRCode.toDataURL(qr, {
