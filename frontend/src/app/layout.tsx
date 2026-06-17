@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
+import { Toaster } from '@/components/ui/sonner'
 
 export const metadata: Metadata = {
   title: 'WhatsApp AI Platform',
@@ -14,8 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className="min-h-screen bg-onyx">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="min-h-screen bg-background">
+        <AuthProvider>
+          {children}
+          <Toaster richColors closeButton />
+        </AuthProvider>
       </body>
     </html>
   )

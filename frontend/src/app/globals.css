@@ -6,90 +6,129 @@
 
 @layer base {
   :root {
-    --background: #08090a;
-    --foreground: #f7f8f8;
-    --card: #161718;
-    --card-foreground: #f7f8f8;
-    --popover: #161718;
-    --popover-foreground: #f7f8f8;
-    --primary: #e4f222;
-    --primary-foreground: #08090a;
-    --secondary: #0f1011;
-    --secondary-foreground: #d0d6e0;
-    --muted: #23252a;
-    --muted-foreground: #8a8f98;
-    --accent: #5e6ad2;
-    --accent-foreground: #f7f8f8;
-    --destructive: #eb5757;
-    --destructive-foreground: #f7f8f8;
-    --border: #23252a;
-    --input: #383b3f;
-    --ring: #5e6ad2;
-    --radius: 6px;
+    --background: 0 0% 2%;
+    --foreground: 0 0% 97%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 97%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 97%;
+    --primary: 72 89% 54%;
+    --primary-foreground: 0 0% 2%;
+    --secondary: 0 0% 9%;
+    --secondary-foreground: 0 0% 82%;
+    --muted: 0 0% 9%;
+    --muted-foreground: 0 0% 54%;
+    --accent: 232 57% 53%;
+    --accent-foreground: 0 0% 97%;
+    --destructive: 0 84% 63%;
+    --destructive-foreground: 0 0% 97%;
+    --border: 0 0% 14%;
+    --input: 0 0% 23%;
+    --ring: 72 89% 54%;
+    --radius: 0.5rem;
   }
 
   * {
-    border-color: #23252a;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-onyx text-snow antialiased;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv01" on, "ss03" on;
   }
 }
 
 @layer components {
-  .card-surface {
-    @apply bg-obsidian border border-graphite rounded-cards;
+  .glass {
+    @apply bg-white/[0.03] border border-white/[0.06] backdrop-blur-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
   }
 
-  .nav-surface {
-    @apply bg-charcoal border-b border-graphite;
+  .glass-hover {
+    @apply hover:bg-white/[0.06] hover:border-white/[0.10] transition-all duration-300;
   }
 
-  .input-surface {
-    @apply bg-steel border-0 text-snow placeholder:text-slate;
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+  .glass-nav {
+    @apply bg-white/[0.02] border-r border-white/[0.06] backdrop-blur-xl;
   }
 
-  .input-surface:focus {
-    box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.5);
+  .glass-card {
+    @apply glass rounded-xl;
   }
 
-  .btn-primary {
-    @apply bg-acid-lime text-onyx font-medium px-4 py-2 rounded-buttons;
-    font-weight: 510;
-    box-shadow: rgba(0, 0, 0, 0.01) 0px 5px 2px 0px, rgba(0, 0, 0, 0.04) 0px 3px 2px 0px, rgba(0, 0, 0, 0.07) 0px 1px 1px 0px, rgba(0, 0, 0, 0.08) 0px 0px 1px 0px;
+  .glass-input {
+    @apply bg-white/[0.05] border border-white/[0.10] rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all duration-200;
   }
 
-  .btn-primary:hover {
-    filter: brightness(1.05);
+  .glass-button {
+    @apply bg-primary text-primary-foreground font-medium px-4 py-2 rounded-lg hover:brightness-110 transition-all duration-200 disabled:opacity-50;
   }
 
-  .btn-secondary {
-    @apply bg-transparent text-fog border border-graphite px-4 py-2 rounded-buttons;
-    font-weight: 400;
+  .glass-button-secondary {
+    @apply bg-white/[0.05] text-muted-foreground border border-white/[0.10] px-4 py-2 rounded-lg hover:bg-white/[0.08] hover:text-foreground transition-all duration-200;
   }
 
-  .btn-secondary:hover {
-    @apply text-snow border-iron;
+  .glass-button-ghost {
+    @apply bg-transparent text-muted-foreground px-3 py-2 rounded-lg hover:bg-white/[0.05] hover:text-foreground transition-all duration-200;
   }
 
-  .btn-ghost {
-    @apply bg-transparent text-fog px-3 py-2 rounded-buttons;
-    font-weight: 400;
+  .glass-button-danger {
+    @apply bg-transparent text-destructive border border-destructive/30 px-4 py-2 rounded-lg hover:bg-destructive/10 hover:border-destructive transition-all duration-200;
   }
 
-  .btn-ghost:hover {
-    @apply text-snow bg-charcoal;
+  .glass-tab {
+    @apply px-3 py-1.5 text-xs rounded-lg transition-all duration-200 text-muted-foreground hover:text-foreground;
   }
 
-  .btn-danger {
-    @apply bg-transparent text-crimson border border-crimson/30 px-4 py-2 rounded-buttons;
-    font-weight: 400;
+  .glass-tab-active {
+    @apply bg-white/[0.08] text-foreground;
   }
 
-  .btn-danger:hover {
-    @apply bg-crimson/10 border-crimson;
+  .glass-badge {
+    @apply text-xs px-2 py-0.5 rounded-full;
   }
+
+  .glass-progress {
+    @apply bg-white/[0.05] rounded-full overflow-hidden;
+  }
+
+  .glass-progress-bar {
+    @apply h-full rounded-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-500;
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .bg-gradient-animate {
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(228, 242, 34, 0.15), transparent),
+                radial-gradient(ellipse 50% 30% at 20% 80%, rgba(94, 106, 210, 0.10), transparent),
+                radial-gradient(ellipse 50% 30% at 80% 80%, rgba(2, 184, 204, 0.08), transparent),
+                hsl(var(--background));
+    animation: gradientShift 15s ease infinite;
+  }
+
+  .bg-login-gradient {
+    background: radial-gradient(ellipse 100% 60% at 50% -20%, rgba(228, 242, 34, 0.12), transparent),
+                radial-gradient(ellipse 60% 40% at 0% 50%, rgba(94, 106, 210, 0.08), transparent),
+                radial-gradient(ellipse 60% 40% at 100% 50%, rgba(2, 184, 204, 0.06), transparent),
+                hsl(var(--background));
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(228, 242, 34, 0.15), 0 0 40px rgba(228, 242, 34, 0.05);
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
